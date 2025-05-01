@@ -55,5 +55,5 @@ image_cleanup/
 ```bash
 pip install pandas pillow
 ```
-👤 Author
+## 👤 Author
 Managed by Rafi Khouzam, built for Aneri Jewel's internal product image cleanup and catalog matching.
