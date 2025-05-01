@@ -1,0 +1,12 @@
+# Ignore data files and outputs
+data/*.csv
+output/*.csv
+output/*.xlsx
+output/cleaned_images/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Jupyter notebooks (optional)
+*.ipynb
