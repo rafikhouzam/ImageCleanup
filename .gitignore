@@ -1,8 +1,7 @@
 # Ignore data files and outputs
-data/*.csv
-output/*.csv
-output/*.xlsx
-output/cleaned_images/
+data/
+output/
+archives/
 
 # Python cache
 __pycache__/
