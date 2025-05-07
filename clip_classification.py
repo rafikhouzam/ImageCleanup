@@ -12,50 +12,35 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 model, preprocess = clip.load("ViT-B/32", device=device)
 
 # === Paths ===
-image_folder = './output/white_backgrounds'
-output_csv = './output/clip_predictions_full.csv'
-base_output_dir = './output'
+image_folder = './output/misclassified'
+output_csv = './output/CSVS/clip_predictions_sketch_retry.csv'
+base_output_dir = './output/white_background_cleaned'
 
-# === Labels & Folders ===
-labels = ["a ring", "a bracelet", "a pendant", "an earring", "a necklace", "a watch", "a piece of jewelry"]
+# === Refined Labels & Folder Map (No "sketch" option) ===
+labels = ["a ring", "a bracelet", "a pendant", "an earring", "a necklace", "an anklet"]
 folder_map = {
     "a ring": "rings",
     "a bracelet": "bracelets",
     "a pendant": "pendants",
     "an earring": "earrings",
     "a necklace": "necklaces",
-    "a watch": "watches",
-    "a piece of jewelry": "unknown",
-    "SKIPPED_LAYOUT": "sketch_pages",
+    "an anklet": "anklets",
     "ERROR": "unknown"
 }
 text_inputs = torch.cat([clip.tokenize(f"This is {label}.") for label in labels]).to(device)
 
-# === Setup output folders ===
+# === Ensure destination folders exist ===
 for folder in folder_map.values():
     os.makedirs(os.path.join(base_output_dir, folder), exist_ok=True)
 
-# === Sketch/layout filter ===
-def is_sketch_or_layout(image: Image.Image, brightness_thresh=230, width_thresh=800) -> bool:
-    grayscale = image.convert('L')
-    brightness = np.array(grayscale).mean()
-    return brightness > brightness_thresh and image.width > width_thresh
-
-# === Classify & move images ===
+# === Reclassify Sketch Images ===
 image_files = [f for f in os.listdir(image_folder) if f.lower().endswith(('.jpg', '.jpeg', '.png'))]
 results = []
 
-for filename in tqdm(image_files, desc="Classifying"):
+for filename in tqdm(image_files, desc="Reclassifying sketch_images"):
     src_path = os.path.join(image_folder, filename)
     try:
         image = Image.open(src_path).convert("RGB")
-
-        # Skip sketch pages
-        if is_sketch_or_layout(image):
-            dest = os.path.join(base_output_dir, folder_map["SKIPPED_LAYOUT"], filename)
-            shutil.move(src_path, dest)
-            results.append((filename, "SKIPPED_LAYOUT", 0.0))
-            continue
 
         # CLIP prediction
         image_input = preprocess(image).unsqueeze(0).to(device)
@@ -84,4 +69,4 @@ for filename in tqdm(image_files, desc="Classifying"):
 # === Save results ===
 df = pd.DataFrame(results, columns=["Filename", "Predicted_Label", "Confidence"])
 df.to_csv(output_csv, index=False)
-print(f"\n✅ All done. Results saved to: {output_csv}")
+print(f"\n✅ Sketch retry complete. Results saved to: {output_csv}")
