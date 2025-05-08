@@ -13,8 +13,8 @@ model, preprocess = clip.load("ViT-B/32", device=device)
 
 # === Paths ===
 image_folder = './output/misclassified'
-output_csv = './output/CSVS/clip_predictions_sketch_retry.csv'
-base_output_dir = './output/white_background_cleaned'
+output_csv = './output/CSVS/clip_predictions_sketch_retry_2.csv'
+base_output_dir = './output/final_white_backgrounds'
 
 # === Refined Labels & Folder Map (No "sketch" option) ===
 labels = ["a ring", "a bracelet", "a pendant", "an earring", "a necklace", "an anklet"]
