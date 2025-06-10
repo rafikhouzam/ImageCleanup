@@ -1,34 +1,47 @@
 import pandas as pd
 from tqdm import tqdm
 
-# Load CSVs
+# === Load Data ===
 df_images = pd.read_csv("./output/CSVS/image_scan_output.csv")
-df_styles = pd.read_csv("./data/all_active_styles_2.csv", dtype=str)
+df_styles = pd.read_csv("./data/all_active_styles_with_vendorcd.csv", dtype=str, encoding="ISO-8859-1")
 
-# Normalize
+# === Normalize ===
 df_images["filename"] = df_images["filename"].astype(str).str.upper()
-df_styles = df_styles.apply(lambda x: x.str.strip().str.upper() if x.dtype == "object" else x)
+df_styles = df_styles.apply(lambda col: col.str.strip().str.upper() if col.dtype == "object" else col)
 
-# Build match dict from multiple possible columns
-style_refs = df_styles.melt(id_vars=["style_cd"], value_vars=["style_cd", "customer_sku", "barcode"],
-                            var_name="matched_column", value_name="matched_value")
-style_refs = style_refs.dropna(subset=["matched_value"])
-match_dict = {str(row["matched_value"]).upper(): row["style_cd"] for _, row in style_refs.iterrows()}
+# Add style_cd prefix
+df_styles["style_cd_prefix6"] = df_styles["style_cd"].str[:6]
 
-# Matching loop with progress bar
+# === Build Prioritized Match List ===
+match_tuples = []
+
+for _, row in df_styles.iterrows():
+    if pd.notna(row.get("style_cd")) and len(row["style_cd"]) > 4:
+        match_tuples.append(("style_cd", row["style_cd"], row["style_cd"]))
+    if pd.notna(row.get("style_cd_prefix6")) and len(row["style_cd_prefix6"]) > 4:
+        match_tuples.append(("style_cd_prefix6", row["style_cd_prefix6"], row["style_cd"]))
+    if pd.notna(row.get("vendor_stylecd")) and len(row["vendor_stylecd"]) > 4:
+        match_tuples.append(("vendor_stylecd", row["vendor_stylecd"], row["style_cd"]))
+    if pd.notna(row.get("customer_sku")) and len(row["customer_sku"]) > 4:
+        match_tuples.append(("customer_sku", row["customer_sku"], row["style_cd"]))
+    if pd.notna(row.get("barcode")) and len(row["barcode"]) > 4:
+        match_tuples.append(("barcode", row["barcode"], row["style_cd"]))
+
+# === Matching Loop ===
 results = []
 for fname in tqdm(df_images["filename"], desc="Matching images"):
-    for key, style_cd in match_dict.items():
-        if key in fname:
+    for source_col, match_value, style_cd in match_tuples:
+        if match_value in fname:
             results.append({
                 "original_filename": fname,
-                "matched_value": key,
+                "matched_column": source_col,
+                "matched_value": match_value,
                 "style_cd": style_cd,
                 "new_filename": f"{style_cd}.jpg"
             })
-            break
+            break  # first match wins
 
-# Save output
+# === Save Output ===
 df_out = pd.DataFrame(results)
-df_out.to_csv("image_rename_map.csv", index=False)
+df_out.to_csv("./output/CSVS/image_rename_map_2.csv", index=False)
 print(f"✅ Done. Matched {len(df_out)} images.")

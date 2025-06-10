@@ -44,16 +44,15 @@ image_cleanup/
 - [x] Build working audit generator  
 - [x] Add resolution & file size enrichment  
 - [x] Organize cleaned image folder  
-- [ ] Implement fuzzy matching  
-- [ ] Validate and tag orphan images  
-- [ ] Train back office team on audit review and SOP  
+- [x] Implement fuzzy matching  
+- [x] Validate and tag orphan images  
+- [x] Train back office team on audit review and SOP  
 
 ---
-
-## 📦 Requirements
-
-```bash
-pip install pandas pillow
-```
 ## 👤 Author
 Managed by Rafi Khouzam, built for Aneri Jewel's internal product image cleanup and catalog matching.
+
+## Disclaimer
+
+there are so many different python scripts in here of various different methods to finally complete this project. just look through them they make sense
+

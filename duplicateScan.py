@@ -1,55 +1,43 @@
-from PIL import Image
-import imagehash
 import os
+import imagehash
+from PIL import Image
+from collections import defaultdict
 import pandas as pd
-from itertools import combinations
-from tqdm import tqdm  # progress bar
+from tqdm import tqdm
 
-image_folder = './output/pendants'
-output_csv = './output/pendants_duplicates.csv'
+# === Config ===
+image_root = "./output/final_whitebg_renamed_clean"
+hash_map = defaultdict(list)
 
-hashes = []
-filenames = []
-dimensions = []
+# === Collect all image paths first
+image_paths = []
+for root, _, files in os.walk(image_root):
+    for fname in files:
+        if fname.lower().endswith(".jpg"):
+            image_paths.append(os.path.join(root, fname))
 
-threshold = 5  # perceptual hash distance
-dimension_tolerance = 0.10  # 10% size diff allowed
+# === Step 1: Compute hashes with tqdm
+for fpath in tqdm(image_paths, desc="Hashing images"):
+    try:
+        with Image.open(fpath) as img:
+            h = imagehash.phash(img)
+            rel_path = os.path.relpath(fpath, image_root).replace("\\", "/")
+            hash_map[str(h)].append(rel_path)
+    except Exception as e:
+        print(f"⚠️ Error hashing {fpath}: {e}")
 
-# Step 1: Hash and record dimensions
-print("🔍 Hashing images and storing dimensions...")
-for file in tqdm(os.listdir(image_folder), desc="Hashing"):
-    if file.lower().endswith(('.jpg', '.jpeg', '.png')):
-        try:
-            img_path = os.path.join(image_folder, file)
-            img = Image.open(img_path)
-            hash_val = imagehash.phash(img)
-            hashes.append(hash_val)
-            filenames.append(file)
-            dimensions.append(img.size)  # (width, height)
-        except Exception as e:
-            print(f"Error processing {file}: {e}")
+# === Step 2: Collect duplicates
+rows = []
+for h, files in hash_map.items():
+    if len(files) > 1:
+        for f in files:
+            rows.append({"hash": h, "image_path": f, "group_size": len(files)})
 
-# Step 2: Compare hashes and dimensions
-print("🔁 Comparing for duplicates...")
-similar_pairs = []
+# === Save results
+df_duplicates = pd.DataFrame(rows)
+df_duplicates.to_csv("./data/image_duplicates.csv", index=False)
 
-for (i, j) in tqdm(combinations(range(len(hashes)), 2), total=(len(hashes) * (len(hashes) - 1)) // 2, desc="Comparing"):
-    dist = hashes[i] - hashes[j]
-
-    if dist <= threshold:
-        w1, h1 = dimensions[i]
-        w2, h2 = dimensions[j]
-
-        # Check size similarity within 10%
-        width_match = abs(w1 - w2) / max(w1, w2) <= dimension_tolerance
-        height_match = abs(h1 - h2) / max(h1, h2) <= dimension_tolerance
-
-        if width_match and height_match:
-            similar_pairs.append((filenames[i], filenames[j], dist, f"{w1}x{h1}", f"{w2}x{h2}"))
-
-# Save results
-df = pd.DataFrame(similar_pairs, columns=['Image1', 'Image2', 'Hash_Distance', 'Size1', 'Size2'])
-df.to_csv(output_csv, index=False)
-
-print(f"\n✅ Done. {len(df)} filtered duplicate pairs saved to:")
-print(f"📄 {output_csv}")
+print(f"✅ Duplicate scan complete.")
+print(f"🔁 Duplicate groups: {df_duplicates['hash'].nunique()}")
+print(f"🧩 Total duplicate images: {len(df_duplicates)}")
+print(f"📂 Saved: image_duplicates.csv")
