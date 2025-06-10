@@ -6,7 +6,7 @@ from tqdm import tqdm
 
 # === CONFIG ===
 csv_path = "final_metadata_streamlit_ready.csv"
-bucket_name = "aneri-jewels-clean-images"
+bucket_name = "bucket-name"  # replace with your S3 bucket name
 MAX_WORKERS = 16  # adjust based on CPU/network
 
 # === Load metadata ===
